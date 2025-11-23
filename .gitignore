@@ -1,0 +1,4 @@
+.env
+maps/
+cache/
+__pycache__/

@@ -1,0 +1,15 @@
+## Dependencies
+
+````python
+pip install pydantic-settings osmnx folium geopandas pandas
+````
+
+Make sure you create a "maps" directory.
+
+## Run
+
+````python
+python view_map.py
+````
+
+*Note: Ensure to load valid .env variables*
