@@ -1,3 +1,4 @@
+import os
 from mapq import CityGraph
 
 def create_city_map(save_path):    
@@ -7,8 +8,13 @@ def create_city_map(save_path):
     return city.create_map(save_path)
 
 if __name__ == "__main__":
+    map_dir = "maps"
+
+    if not os.path.exists(map_dir):
+        os.makedirs(map_dir)
+    
     mapa = create_city_map(
-        save_path="maps/city_map.html"
+        save_path=f"{map_dir}/city_map.html"
     )
     
     if mapa:
