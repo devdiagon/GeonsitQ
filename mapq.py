@@ -4,6 +4,8 @@ import geopandas as gpd
 import pandas as pd
 
 from settings import settings
+from factories.district_layer_factory import DistrictLayerFactory
+from factories.bus_stop_layer_factory import BusStopLayerFactory
 
 class CityGraph:
     _instance = None
@@ -14,7 +16,7 @@ class CityGraph:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._districts = cls._load_parroquias()
+            cls._districts = cls._load_districts()
             cls._graph = cls._load_graph()
             cls._pt_stops = cls._load_bus_stops()
         return cls._instance
@@ -49,7 +51,7 @@ class CityGraph:
             return None
 
     @staticmethod
-    def _load_parroquias():
+    def _load_districts():
         districts_names = []
 
         for district in settings.DISTRICTS:
@@ -85,41 +87,16 @@ class CityGraph:
                 tiles='OpenStreetMap'
             )
             
-            # Añadir límites de distritos en rojo
-            for idx, row in self._graph.iterrows():
-                if hasattr(row.geometry, '__geo_interface__'):
-                    popup_text = f"<b>Distrito:</b> {row.get('display_name', 'N/A')}"
-                    
-                    folium.GeoJson(
-                        row.geometry.__geo_interface__,
-                        style_function=lambda x: {
-                            'fillColor': 'red',
-                            'color': 'red',
-                            'weight': 2,
-                            'fillOpacity': 0.1
-                        },
-                        popup=folium.Popup(popup_text, max_width=300)
-                    ).add_to(m)
+            # Crear capas usando factories concretas
+            district_factory = DistrictLayerFactory()
+            bus_factory = BusStopLayerFactory()
+
+            district_layers = district_factory.create_layer(self)
+            bus_layers = bus_factory.create_layer(self)
             
-            # Añadir paradas de bus: Convertir a coordenadas y añadir marcadores
-            for idx, stop in self._pt_stops.iterrows():
-                if hasattr(stop.geometry, 'x') and hasattr(stop.geometry, 'y'):
-                    lon, lat = stop.geometry.x, stop.geometry.y
-
-                    # Obtener nombre de la parada si está disponible
-                    popup_text = "Parada de bus"
-                    if 'name' in stop and pd.notna(stop['name']):
-                        popup_text = f"Parada: {stop['name']}"
-
-                    folium.CircleMarker(
-                        location=[lat, lon],
-                        radius=3,
-                        popup=popup_text,
-                        color='blue',
-                        fillColor='blue',
-                        fillOpacity=0.7,
-                        weight=1
-                    ).add_to(m)
+            # Añadir capas al mapa
+            for layer in district_layers + bus_layers:
+                layer.add_to(m)
             
             # Añadir control de capas
             folium.LayerControl().add_to(m)
