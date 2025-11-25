@@ -68,7 +68,7 @@ class CityGraph:
     def get_places(self):
         return self._districts
 
-    def create_map(self, save_path):
+    def create_map(self, save_path : str):
         
         if self._graph is None or self._pt_stops is None:
             print("No hay datos suficientes para crear el mapa")
