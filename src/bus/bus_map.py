@@ -4,7 +4,7 @@ from abstract.map import Map
 
 class BusMap(Map):
     
-    def visualize(self, ax=None, titulo="Sistema de Buses Urbanos"):
+    def visualize(self, ax=None, title="Sistema de Buses Urbanos"):
         if ax is None:
             fig, ax = plt.subplots(figsize=(16, 12))
             show = True
@@ -16,7 +16,7 @@ class BusMap(Map):
         self.stop.visualize(ax)
         
         if show:
-            plt.title(titulo, fontsize=18, fontweight='bold')
+            plt.title(title, fontsize=18, fontweight='bold')
             plt.xlabel('X (metros UTM)', fontsize=12)
             plt.ylabel('Y (metros UTM)', fontsize=12)
             plt.grid(True, alpha=0.3)

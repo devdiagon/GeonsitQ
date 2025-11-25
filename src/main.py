@@ -21,7 +21,7 @@ def main():
     bus_factory = BusFactory(SHP_BUS_ROUTES, SHP_BUS_STOPS, route_code='Código_Ru')
     bus_map = bus_factory.create_map()
     
-    bus_map.visualize(titulo="Sistema de Buses Urbanos")
+    bus_map.visualize(title="Sistema de Buses Urbanos")
 
 
 if __name__ == "__main__":
