@@ -5,20 +5,20 @@ import pandas as pd
 
 from settings import settings
 from factories.district_layer_factory import DistrictLayerFactory
-from factories.bus_stop_layer_factory import BusStopLayerFactory
+from factories.parks_layer_factory import ParksLayerFactory
 
 class CityGraph:
     _instance = None
     _graph = None
     _districts = None
-    _pt_stops = None
+    _parks = None
 
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._districts = cls._load_districts()
             cls._graph = cls._load_graph()
-            cls._pt_stops = cls._load_bus_stops()
+            cls._parks = cls._load_parks()
         return cls._instance
 
     @classmethod
@@ -36,20 +36,6 @@ class CityGraph:
             return gpd.GeoDataFrame(pd.concat(gdfs, ignore_index=True))
         return None
     
-    @classmethod
-    def _load_bus_stops(cls):
-        try:
-            tags = {'public_transport': True}
-            stops = ox.features_from_place(cls._districts, tags=tags)
-            
-            if stops is not None and len(stops) > 0:
-                print(f"Se cargaron {len(stops)} paradas de bus.")
-                return stops
-            return None
-        except Exception as e:
-            print(f"Error cargando paradas de bus: {e}")
-            return None
-
     @staticmethod
     def _load_districts():
         districts_names = []
@@ -58,19 +44,32 @@ class CityGraph:
             districts_names.append(f"{district}, {settings.CITY}, {settings.COUNTRY}")
 
         return districts_names
+    
+    @classmethod
+    def _load_parks(cls):
+        try:
+            tags = {'leisure': 'park'}
+            parks = ox.features_from_place(cls._districts, tags=tags)
+            if parks is not None and len(parks) > 0:
+                print(f"Se cargaron {len(parks)} parques.")
+                return parks
+            return None
+        except Exception as e:
+            print(f"Error cargando parques: {e}")
+            return None
+    
+    def get_parks(self):
+        return self._parks
 
     def get_graph(self):
         return self._graph
-    
-    def get_bus_stops(self):
-        return self._pt_stops
-    
+        
     def get_places(self):
         return self._districts
 
     def create_map(self, save_path : str):
         
-        if self._graph is None or self._pt_stops is None:
+        if self._graph is None or self._parks is None:
             print("No hay datos suficientes para crear el mapa")
             return None
         
@@ -89,13 +88,14 @@ class CityGraph:
             
             # Crear capas usando factories concretas
             district_factory = DistrictLayerFactory()
-            bus_factory = BusStopLayerFactory()
+            park_factory = ParksLayerFactory()
+            
 
             district_layers = district_factory.create_layer(self)
-            bus_layers = bus_factory.create_layer(self)
-            
+            park_layers = park_factory.create_layer(self)
+
             # Añadir capas al mapa
-            for layer in district_layers + bus_layers:
+            for layer in district_layers + park_layers:
                 layer.add_to(m)
             
             # Añadir control de capas
