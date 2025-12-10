@@ -10,13 +10,14 @@ from factories.crimes_layer_factory import CrimesLayerFactory
 from folium_integration.metro.metro_factory import MetroFactory
 from folium_integration.bus.bus_factory import BusFactory
 from folium_integration.city_integration import CityTransportIntegration
-
+from factories.tourist_place_layer_factory import TouristPlaceLayerFactory
 
 class CityGraph:
     _instance = None
     _graph = None
     _districts = None
     _parks = None
+    _tourist_places = None
 
     def __new__(cls):
         if cls._instance is None:
@@ -24,6 +25,7 @@ class CityGraph:
             cls._districts = cls._load_districts()
             cls._graph = cls._load_graph()
             cls._parks = cls._load_parks()
+            cls._tourist_places = cls._load_tourist_places()
         return cls._instance
 
     @classmethod
@@ -60,7 +62,33 @@ class CityGraph:
         except Exception as e:
             print(f"Error cargando parques: {e}")
             return None
-    
+
+    @classmethod
+    def _load_tourist_places(cls):
+        try:
+            # Solo categorias especificas
+            tags = {
+                'tourism': [
+                    'museum',
+                    'attraction',
+                    'viewpoint',
+                    'gallery',
+                    'theme_park'
+                ],
+                'shop': ['mall']
+            }
+
+            places = ox.features_from_place(cls._districts, tags=tags)
+
+            if places is not None and len(places) > 0:
+                print(f"Se cargaron {len(places)} lugares turisticos filtrados.")
+                return places
+            return None
+
+        except Exception as e:
+            print(f"Error cargando lugares turisticos: {e}")
+            return None
+
     def get_parks(self):
         return self._parks
 
@@ -69,6 +97,9 @@ class CityGraph:
         
     def get_places(self):
         return self._districts
+    
+    def get_tourist_places(self):
+        return self._tourist_places
 
     def create_map(
             self,
@@ -129,7 +160,10 @@ class CityGraph:
             district_layers = district_factory.create_layer(self)
             park_layers = park_factory.create_layer(self)
             
-            for layer in district_layers + park_layers:
+            tourism_factory = TouristPlaceLayerFactory()
+            tourism_layers = tourism_factory.create_layer(self)
+
+            for layer in district_layers + park_layers + tourism_layers:
                 layer.add_to(m)
             
             # Añadir capa de delitos
