@@ -6,6 +6,7 @@ import pandas as pd
 from settings import settings
 from factories.district_layer_factory import DistrictLayerFactory
 from factories.parks_layer_factory import ParksLayerFactory
+from factories.crimes_layer_factory import CrimesLayerFactory
 from folium_integration.metro.metro_factory import MetroFactory
 from folium_integration.bus.bus_factory import BusFactory
 from folium_integration.city_integration import CityTransportIntegration
@@ -69,7 +70,16 @@ class CityGraph:
     def get_places(self):
         return self._districts
 
-    def create_map(self, save_path: str, include_transport=True, include_metro=True, include_buses=True, max_rutas=50):
+    def create_map(
+            self,
+            save_path: str,
+            include_crimes=True,
+            include_transport=True,
+            include_metro=True,
+            include_buses=True,
+            heatmap_type='colored_polygons',
+            max_rutas=50
+        ):
         
         if self._graph is None:
             print("No hay datos suficientes para crear el mapa")
@@ -121,6 +131,18 @@ class CityGraph:
             
             for layer in district_layers + park_layers:
                 layer.add_to(m)
+            
+            # Añadir capa de delitos
+            if include_crimes:
+                print("\n=== Agregando capa HeatMap ===")
+                crime_factory = CrimesLayerFactory(
+                    shapefile_path=settings.SHP_CRIMES,
+                    layer_type=heatmap_type,
+                    color_field='color'
+                )
+                crime_layers = crime_factory.create_layer()
+                for layer in crime_layers:
+                    layer.add_to(m)
             
             # Añadir capas de transporte
             if include_transport:

@@ -12,5 +12,6 @@ class Settings(BaseSettings):
   SHP_METRO_STATIONS: str
   SHP_BUS_ROUTES: str
   SHP_BUS_STOPS: str
+  SHP_CRIMES: str
 
 settings = Settings()

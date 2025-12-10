@@ -12,6 +12,8 @@ def crear_mapa_completo():
         include_transport=True,
         include_metro=True,
         include_buses=True,
+        include_crimes=True,
+        heatmap_type='colored_polygons',
         max_rutas=204
     )
     
