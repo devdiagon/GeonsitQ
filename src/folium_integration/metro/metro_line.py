@@ -21,7 +21,6 @@ class MetroLine(Route):
             self.gdf = None
     
     def add_to_map(self, feature_group):
-        """Agrega la línea de metro al mapa"""
         if self.gdf is None or len(self.gdf) == 0:
             return
         

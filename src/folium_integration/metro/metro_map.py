@@ -28,5 +28,4 @@ class MetroMap(Map):
         return layers
     
     def get_layer_name(self):
-        """Retorna el nombre de la capa"""
-        return f'🚇 {self.system_name}'
+        return f' {self.system_name}'

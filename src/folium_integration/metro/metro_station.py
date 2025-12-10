@@ -39,7 +39,7 @@ class MetroStation(Stop):
                 
                 popup_html = f"""
                 <div style="font-family: Arial; width: 200px;">
-                    <h4 style="margin: 0; color: #E63946;">🚇 {nombre}</h4>
+                    <h4 style="margin: 0; color: #E63946;"> {nombre}</h4>
                     <p style="margin: 5px 0;"><b>Dirección:</b> {direccion}</p>
                 </div>
                 """

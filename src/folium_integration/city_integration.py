@@ -69,7 +69,7 @@ class CityTransportIntegration:
         bounds = self.get_all_bounds()
         
         if bounds is None:
-            print("⚠️  No se pudieron calcular bounds, usando centro por defecto de Quito")
+            print(" No se pudieron calcular bounds, usando centro por defecto de Quito")
             return [-0.1807, -78.4678]
         
         center_lat = (bounds[1] + bounds[3]) / 2

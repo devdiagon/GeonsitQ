@@ -9,14 +9,14 @@ class BusMap(Map):
         
         try:
             rutas_group = folium.FeatureGroup(
-                name=f'🚌 {self.system_name} - Rutas',
+                name=f' {self.system_name} - Rutas',
                 show=True
             )
             self.route.add_to_map(rutas_group)
             layers.append(rutas_group)
             
             paradas_group = folium.FeatureGroup(
-                name=f'🚏 {self.system_name} - Paradas',
+                name=f' {self.system_name} - Paradas',
                 show=True
             )
             self.stop.add_to_map(paradas_group)

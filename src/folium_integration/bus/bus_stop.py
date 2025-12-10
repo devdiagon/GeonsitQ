@@ -105,7 +105,7 @@ class BusStop(Stop):
                     
                     popup_html = f"""
                     <div style="font-family: Arial; width: 220px;">
-                        <h4 style="margin: 0; color: #FF6B35;">🚏 Parada</h4>
+                        <h4 style="margin: 0; color: #FF6B35;"> Parada</h4>
                         <p style="margin: 5px 0;"><b>Principal:</b> {principal}</p>
                         <p style="margin: 5px 0;"><b>Secundaria:</b> {secundaria}</p>
                     </div>

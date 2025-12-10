@@ -80,7 +80,7 @@ class BusRoute(Route):
                 
                 popup_html = f"""
                 <div style="font-family: Arial;">
-                    <h4 style="margin: 0;">🚌 Ruta {codigo}</h4>
+                    <h4 style="margin: 0;"> Ruta {codigo}</h4>
                 </div>
                 """
                 
