@@ -9,10 +9,6 @@ Make sure you create a "maps" directory.
 ## Run
 
 ````python
-python src/view_map.py
-````
-
-````python
 python src/main.py
 ````
 
