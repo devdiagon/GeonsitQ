@@ -6,6 +6,7 @@ import pandas as pd
 from settings import settings
 from factories.district_layer_factory import DistrictLayerFactory
 from factories.parks_layer_factory import ParksLayerFactory
+from factories.tourist_place_layer_factory import TouristPlaceLayerFactory 
 from factories.crimes_layer_factory import CrimesLayerFactory
 from folium_integration.metro.metro_factory import MetroFactory
 from folium_integration.bus.bus_factory import BusFactory
@@ -156,16 +157,20 @@ class CityGraph:
             # Añadir capas de ciudad
             district_factory = DistrictLayerFactory()
             park_factory = ParksLayerFactory()
-            
-            district_layers = district_factory.create_layer(self)
-            park_layers = park_factory.create_layer(self)
-            
             tourism_factory = TouristPlaceLayerFactory()
-            tourism_layers = tourism_factory.create_layer(self)
-
-            for layer in district_layers + park_layers + tourism_layers:
-                layer.add_to(m)
             
+            # Forma 1 para agregar capas: cargar capas individualmente
+            district_layers = district_factory.create_layer(self)
+            district_layers.add_to_map(m)
+
+            # Forma 2 para agregar capas: por grupo de características (feature group)
+            park_layers = park_factory.create_feature_group(self)
+            tourism_layers = tourism_factory.create_feature_group(self)
+
+            park_layers.add_to(m)
+            tourism_layers.add_to(m)
+
+
             # Añadir capa de delitos
             if include_crimes:
                 print("\n=== Agregando capa HeatMap ===")
