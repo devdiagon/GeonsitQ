@@ -1,4 +1,6 @@
 import folium
+
+from factories.adapters.heatmap_layer import HeatMapLayer
 from .map_layer_factory import MapLayerFactory
 from .adapters.crimes_adapter import CrimesAdapter
 
@@ -10,7 +12,7 @@ class CrimesLayerFactory(MapLayerFactory):
         self.intensity_field = intensity_field
         self.color_field = color_field
     
-    def create_layer(self, citygraph=None):
+    def create_layer(self, citygraph=None) -> HeatMapLayer:
         layers = []
         
         try:
