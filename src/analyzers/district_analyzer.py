@@ -11,6 +11,8 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Optional, Dict, List
 import yaml
+import hashlib
+import json
 
 # Imports de módulos propios
 import sys
@@ -305,6 +307,70 @@ class DistrictAnalyzer:
         
         return metrics
     
+    # =================== CACHE RELATED METHODS ===================
+
+    def _generate_cache_key(self) -> str:
+        cache_config = {
+            'safety_inversion': self.config.get('normalization', {}).get('safety_inversion', True),
+            'ideal_green_coverage': self.config.get('analysis', {}).get('green', {}).get('ideal_green_coverage', 0.15),
+            'min_park_area': self.config.get('analysis', {}).get('green', {}).get('min_park_area', 1000.0),
+        }
+        
+        config_str = json.dumps(cache_config, sort_keys=True)
+        cache_key = hashlib.md5(config_str.encode()).hexdigest()[:8]
+        
+        return cache_key
+    
+    def _get_cache_filepath(self) -> Path:
+        cache_key = self._generate_cache_key()
+        filename = f"district_metrics_{cache_key}.pkl"
+        return self.cache_dir / filename
+
+    def get_cache_info(self) -> Dict[str, Any]:
+        """
+        Obtiene información sobre el estado del caché.
+        
+        Returns:
+            Dict con información del caché
+        """
+        cache_file = self._get_cache_filepath()
+        
+        info = {
+            'cache_file': cache_file.name,
+            'exists': cache_file.exists(),
+            'enabled': self.config.get('cache', {}).get('enabled', True),
+            'ttl_hours': self.cache_ttl_hours,
+            'config_hash': self._generate_cache_key()
+        }
+        
+        if cache_file.exists():
+            try:
+                stat = cache_file.stat()
+                cache_time = datetime.fromtimestamp(stat.st_mtime)
+                age = datetime.now() - cache_time
+                
+                info.update({
+                    'size_kb': stat.st_size / 1024,
+                    'created': cache_time.isoformat(),
+                    'age_hours': age.total_seconds() / 3600,
+                    'is_valid': age <= timedelta(hours=self.cache_ttl_hours)
+                })
+                
+                # Intentar leer metadata
+                try:
+                    with open(cache_file, 'rb') as f:
+                        cached_data = pickle.load(f)
+                    
+                    if isinstance(cached_data, dict) and 'metadata' in cached_data:
+                        info['metadata'] = cached_data['metadata']
+                except:
+                    pass
+                    
+            except Exception as e:
+                info['error'] = str(e)
+        
+        return info
+
     def get_cached_metrics(self) -> Optional[pd.DataFrame]:
         """
         Intenta cargar métricas desde caché.
@@ -312,28 +378,75 @@ class DistrictAnalyzer:
         Returns:
             DataFrame con métricas o None si no hay caché válido
         """
-        if not self.cache_file.exists():
-            print("No existe archivo de caché")
+        cache_file = self._get_cache_filepath()
+
+        if not cache_file.exists():
+            print(f" No existe archivo de caché: {cache_file.name}")
             return None
         
         try:
-            # Verificar antigüedad del caché
-            cache_time = datetime.fromtimestamp(self.cache_file.stat().st_mtime)
+            # Cargar caché
+            with open(cache_file, 'rb') as f:
+                cached_data = pickle.load(f)
+            
+            # Validar estructura del caché
+            if not isinstance(cached_data, dict):
+                print(" Formato de caché inválido (no es dict)")
+                return None
+            
+            required_keys = ['metrics_df', 'timestamp', 'config_hash', 'version']
+            if not all(key in cached_data for key in required_keys):
+                print(" Caché incompleto, faltan claves requeridas")
+                return None
+            
+            # Verificar versión del caché
+            cache_version = cached_data.get('version', '1.0.0')
+            current_version = '1.0.0'
+            
+            if cache_version != current_version:
+                print(f" Versión de caché incompatible: {cache_version} vs {current_version}")
+                return None
+            
+            # Verificar hash de configuración
+            cached_hash = cached_data.get('config_hash')
+            current_hash = self._generate_cache_key()
+            
+            if cached_hash != current_hash:
+                print(f" Configuración cambió desde caché (hash: {cached_hash} vs {current_hash})")
+                return None
+            
+            # Verificar antigüedad (TTL)
+            cache_timestamp = cached_data.get('timestamp')
+            cache_time = datetime.fromisoformat(cache_timestamp)
             age = datetime.now() - cache_time
             
             if age > timedelta(hours=self.cache_ttl_hours):
-                print(f"Caché expirado (edad: {age.total_seconds()/3600:.1f} horas)")
+                print(f" Caché expirado (edad: {age.total_seconds()/3600:.1f} horas > {self.cache_ttl_hours} horas)")
                 return None
             
-            # Cargar caché
-            with open(self.cache_file, 'rb') as f:
-                cached_data = pickle.load(f)
+            # Caché válido
+            metrics_df = cached_data['metrics_df']
             
-            print(f"Caché válido encontrado (edad: {age.total_seconds()/3600:.1f} horas)")
-            return cached_data
+            # Validar que tiene las columnas esperadas
+            required_cols = ['district_name', 'safety', 'transport', 'green', 'services']
+            if not all(col in metrics_df.columns for col in required_cols):
+                print(" Caché con columnas faltantes")
+                return None
+            
+            print(f"Caché válido encontrado:")
+            print(f"   Archivo: {cache_file.name}")
+            print(f"   Edad: {age.total_seconds()/3600:.1f} horas")
+            print(f"   Distritos: {len(metrics_df)}")
+            
+            return metrics_df
             
         except Exception as e:
-            print(f"Error cargando caché: {e}")
+            print(f" Error cargando caché: {e}")
+            try:
+                cache_file.unlink()
+                print(" Caché corrupto eliminado")
+            except:
+                pass
             return None
     
     def _save_to_cache(self, metrics_df: pd.DataFrame):
@@ -341,23 +454,82 @@ class DistrictAnalyzer:
         try:
             # Asegurar que el directorio existe
             self.cache_dir.mkdir(parents=True, exist_ok=True)
+
+            # Preparar datos para caché
+            cache_data = {
+                'metrics_df': metrics_df,
+                'timestamp': datetime.now().isoformat(),
+                'config_hash': self._generate_cache_key(),
+                'version': '1.0.0',
+                'metadata': {
+                    'num_districts': len(metrics_df),
+                    'columns': list(metrics_df.columns),
+                    'config': {
+                        'ttl_hours': self.cache_ttl_hours,
+                        'safety_inversion': self.config.get('normalization', {}).get('safety_inversion', True),
+                    }
+                }
+            }
+
+            # Guardar en archivo
+            cache_file = self._get_cache_filepath()
+            with open(cache_file, 'wb') as f:
+                pickle.dump(cache_data, f, protocol=pickle.HIGHEST_PROTOCOL)
             
-            # Guardar en pickle
-            with open(self.cache_file, 'wb') as f:
-                pickle.dump(metrics_df, f)
+            # Obtener tamaño del archivo
+            file_size = cache_file.stat().st_size / 1024  # KB
             
-            print(f"Métricas guardadas en caché: {self.cache_file}")
+            print(f"Métricas guardadas en caché:")
+            print(f"   Archivo: {cache_file.name}")
+            print(f"   Tamaño: {file_size:.1f} KB")
+            print(f"   Distritos: {len(metrics_df)}")
+            print(f"   TTL: {self.cache_ttl_hours} horas")
+            
+            self._cleanup_old_caches()
             
         except Exception as e:
             print(f"Error guardando caché: {e}")
     
+     def _cleanup_old_caches(self):
+        """
+        Limpia archivos de caché antiguos o con diferentes hashes.
+        
+        Mantiene solo el caché actual y elimina los demás.
+        """
+        if not self.cache_dir.exists():
+            return
+        
+        current_cache_file = self._get_cache_filepath()
+        
+        # Buscar todos los archivos de caché
+        cache_pattern = "district_metrics_*.pkl"
+        cache_files = list(self.cache_dir.glob(cache_pattern))
+        
+        cleaned = 0
+        for cache_file in cache_files:
+            if cache_file != current_cache_file:
+                try:
+                    cache_file.unlink()
+                    cleaned += 1
+                except Exception as e:
+                    print(f" No se pudo eliminar {cache_file.name}: {e}")
+        
+        if cleaned > 0:
+            print(f"Limpieza: {cleaned} caché(s) antiguo(s) eliminado(s)")
+    
     def invalidate_cache(self):
         """Elimina el archivo de caché."""
-        if self.cache_file.exists():
-            self.cache_file.unlink()
-            print("Caché invalidado")
+        cache_file = self._get_cache_filepath()
+        if cache_file.exists():
+            try:
+                cache_file.unlink()
+                print(f" Caché invalidado: {cache_file.name}")
+            except Exception as e:
+                print(f" Error invalidando caché: {e}")
         else:
             print("No hay caché para invalidar")
+
+    # =================================================================
     
     def get_metrics_summary(self) -> pd.DataFrame:
         """
