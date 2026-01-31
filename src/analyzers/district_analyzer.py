@@ -326,7 +326,7 @@ class DistrictAnalyzer:
         filename = f"district_metrics_{cache_key}.pkl"
         return self.cache_dir / filename
 
-    def get_cache_info(self) -> Dict[str, Any]:
+    def get_cache_info(self) -> Dict[str, any]:
         """
         Obtiene información sobre el estado del caché.
         
@@ -490,7 +490,7 @@ class DistrictAnalyzer:
         except Exception as e:
             print(f"Error guardando caché: {e}")
     
-     def _cleanup_old_caches(self):
+    def _cleanup_old_caches(self):
         """
         Limpia archivos de caché antiguos o con diferentes hashes.
         
