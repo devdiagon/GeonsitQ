@@ -7,6 +7,7 @@ import geopandas as gpd
 import numpy as np
 from typing import Optional, Union
 from shapely.geometry import Polygon, MultiPolygon
+import pandas as pd
 
 # Importar utilidades espaciales
 import sys
@@ -329,6 +330,188 @@ def calculate_transport_score(
         
     except Exception as e:
         print(f"Error calculando transport score: {e}")
+        import traceback
+        traceback.print_exc()
+        return 0.0
+
+def calculate_green_score(
+    district_polygon: Union[Polygon, MultiPolygon],
+    parks_gdf: gpd.GeoDataFrame,
+    ideal_coverage: float = 0.15,
+    min_park_area: float = 1000.0
+) -> float:
+    """
+    Calcula el score de espacios verdes de un distrito.
+    
+    Se basa en:
+    - Porcentaje del área del distrito cubierta por parques
+    - Se filtran parques muy pequeños (< min_park_area m²)
+    
+    Args:
+        district_polygon: Polígono del distrito
+        parks_gdf: GeoDataFrame con parques (geometrías Polygon)
+        ideal_coverage: Cobertura ideal de parques (default 15% = 0.15)
+        min_park_area: Área mínima de parque a considerar (m²)
+    
+    Returns:
+        float: Score de espacios verdes (0.0 - 1.0)
+               - 1.0 = Cobertura >= ideal_coverage
+               - 0.0 = Sin parques
+    
+    Example:
+        >>> green = calculate_green_score(district_polygon, parks_gdf)
+        >>> print(f"Espacios verdes: {green * 100:.1f}%")
+    
+    Notes:
+        - Asume que parks_gdf tiene geometrías tipo Polygon/MultiPolygon
+        - El score se normaliza contra ideal_coverage
+        - Parques < min_park_area se ignoran (pueden ser errores de datos)
+    """
+    if district_polygon is None or not district_polygon.is_valid:
+        print(" Polígono de distrito inválido")
+        return 0.0
+    
+    if parks_gdf is None or len(parks_gdf) == 0:
+        print(" No hay datos de parques")
+        return 0.0
+    
+    try:
+        # Filtrar solo geometrias Polygon/MultiPolygon
+        parks_filtered = parks_gdf[
+            parks_gdf.geometry.type.isin(['Polygon', 'MultiPolygon'])
+        ].copy()
+
+        if len(parks_filtered) == 0:
+            return 0.0
+        
+        # Reproyectar a UTM para cálculo de áreas
+        original_crs = parks_filtered.crs
+        parks_utm = parks_filtered.to_crs('EPSG:32717')
+
+        # Calcular áreas EN UTM (m2)
+        parks_utm['area'] = parks_utm.geometry.area
+
+        # Filtrar por área mínima (en m2)
+        parks_utm = parks_utm[parks_utm['area'] >= min_park_area]
+        
+        if len(parks_utm) == 0:
+            return 0.0
+
+        # Reproyectar de vuelta a CRS original para cálculos espaciales
+        parks_filtered = parks_utm.to_crs(original_crs)
+        
+        # Calcular cobertura de área
+        coverage = calculate_area_coverage(district_polygon, parks_filtered)
+        
+        # Normalizar contra ideal_coverage
+        # Si coverage >= ideal_coverage → score = 1.0
+        # Si coverage = 0 → score = 0.0
+        green_score = min(coverage / ideal_coverage, 1.0)
+        
+        return green_score
+        
+    except Exception as e:
+        print(f"Error calculando green score: {e}")
+        import traceback
+        traceback.print_exc()
+        return 0.0
+
+
+def calculate_services_score(
+    district_polygon: Union[Polygon, MultiPolygon],
+    tourist_places_gdf: Optional[gpd.GeoDataFrame] = None,
+    weights: Optional[dict] = None
+) -> float:
+    """
+    Calcula el score de servicios de un distrito basado en POIs.
+    
+    Considera:
+    - Centros comerciales (shopping malls)
+    - Museos y atracciones turísticas
+    - Otros POIs de interés
+    
+    Args:
+        district_polygon: Polígono del distrito
+        tourist_places_gdf: GeoDataFrame con lugares turísticos y servicios
+                           Debe tener campo 'tourism' o 'shop'
+        weights: Pesos por tipo de POI. Default:
+                 {'mall': 1.5, 'museum': 1.2, 'attraction': 1.0, 'other': 0.8}
+    
+    Returns:
+        float: Score de servicios (0.0 - 1.0)
+    
+    Example:
+        >>> services = calculate_services_score(district_polygon, pois_gdf)
+        >>> print(f"Servicios: {services * 100:.1f}%")
+    
+    Notes:
+        - Basado en CONTEXT.md, tourist_places incluye:
+          'tourism': ['museum', 'attraction', 'viewpoint', 'gallery', 'theme_park']
+          'shop': ['mall']
+        - El score se normaliza asumiendo que 10 POIs ponderados = excelente
+    """
+    if district_polygon is None or not district_polygon.is_valid:
+        print(" Polígono de distrito inválido")
+        return 0.0
+    
+    if tourist_places_gdf is None or len(tourist_places_gdf) == 0:
+        print(" No hay datos de lugares turísticos/servicios")
+        return 0.0
+    
+    # Pesos por defecto
+    if weights is None:
+        weights = {
+            'mall': 1.5,      
+            'museum': 1.2,    
+            'attraction': 1.0,
+            'viewpoint': 1.0, 
+            'gallery': 1.0,   
+            'theme_park': 1.2,
+            'other': 0.8      
+        }
+    
+    try:
+        # Asegurar mismo CRS
+        district_crs = 'EPSG:4326'
+        tourist_places = tourist_places_gdf.copy()
+        if tourist_places.crs != district_crs:
+            tourist_places = tourist_places.to_crs(district_crs)
+        
+        # Encontrar POIs dentro del distrito
+        pois_in_district = points_in_polygon(district_polygon, tourist_places)
+        
+        if len(pois_in_district) == 0:
+            return 0.0
+        
+        # Calcular score ponderado
+        total_weighted_pois = 0.0
+        
+        for idx, poi in pois_in_district.iterrows():
+            # Determinar tipo de POI
+            poi_weight = weights['other']  # Default
+            
+            # Verificar si tiene campo 'shop'
+            if 'shop' in poi.index and pd.notna(poi['shop']):
+                if poi['shop'] == 'mall':
+                    poi_weight = weights['mall']
+            
+            # Verificar si tiene campo 'tourism'
+            elif 'tourism' in poi.index and pd.notna(poi['tourism']):
+                tourism_type = poi['tourism']
+                if tourism_type in weights:
+                    poi_weight = weights[tourism_type]
+                else:
+                    poi_weight = weights['other']
+            
+            total_weighted_pois += poi_weight
+        
+        ideal_pois = 10.0
+        services_score = min(total_weighted_pois / ideal_pois, 1.0)
+        
+        return services_score
+        
+    except Exception as e:
+        print(f"Error calculando services score: {e}")
         import traceback
         traceback.print_exc()
         return 0.0
