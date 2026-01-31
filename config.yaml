@@ -1,0 +1,108 @@
+# === Estrategias de Análisis ===
+strategies:
+  quality_of_life:
+    name: "Calidad de Vida"
+    description: "Prioriza seguridad, acceso a transporte y espacios verdes para residentes"
+    weights:
+      safety: 0.40
+      transport: 0.35
+      green: 0.25
+    color_scheme: "YlGn"
+    
+  tourist:
+    name: "Turista/Visitante"
+    description: "Enfoca en atractivos turísticos, seguridad y facilidad de movilidad"
+    weights:
+      services: 0.40
+      safety: 0.35
+      transport: 0.25
+    color_scheme: "YlOrRd"
+    
+  convenience:
+    name: "Servicios y Conveniencia"
+    description: "Maximiza acceso a comercio, transporte y recreación"
+    weights:
+      services: 0.45
+      transport: 0.35
+      green: 0.20
+    color_scheme: "PuBu"  # Purple-Blue
+
+# === Normalización de Datos ===
+normalization:
+  method: "min_max"
+  handle_nulls: "neutral"
+  safety_inversion: true
+
+# === Sistema de Caché ===
+cache:
+  enabled: true
+  directory: "data/cache"
+  metrics_file: "district_metrics.pkl"
+  ttl_hours: 24
+  
+# === Configuración de Visualización ===
+visualization:
+  map_center:
+    lat: -0.1807
+    lon: -78.4678
+  default_zoom: 11
+  
+  # Choropleth (distritos coloreados)
+  choropleth:
+    color_bins: 5
+    opacity: 0.7
+    line_weight: 2
+    highlight_weight: 4
+    
+  # Tooltips
+  tooltip:
+    show_metrics: true
+    show_rank: true
+    decimal_places: 1
+
+# === Umbrales y Parámetros de Análisis ===
+analysis:
+  # Transporte
+  transport:
+    max_distance_to_metro: 500
+    bus_stop_search_radius: 100
+    min_routes_for_good_connectivity: 3
+  
+  # Espacios Verdes
+  green:
+    min_park_area: 1000
+    ideal_green_coverage: 0.15
+  
+  # Servicios
+  services:
+    shopping_center_weight: 1.5
+    museum_weight: 1.2
+  
+  # Seguridad
+  safety:
+    gridcode_weights:
+      1: 1.0
+      2: 0.8
+      3: 0.5
+      4: 0.3
+      5: 0.1
+
+# === Streamlit UI ===
+streamlit:
+  page_title: "Sistema de Recomendaciones Urbanas"
+  page_icon: "🏙️"
+  layout: "wide"
+  initial_sidebar_state: "expanded"
+  
+  theme:
+    primary_color: "#FF4B4B"
+    background_color: "#FFFFFF"
+    secondary_background_color: "#F0F2F6"
+    text_color: "#262730"
+
+# === Logging ===
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/app.log"
+  console: true
