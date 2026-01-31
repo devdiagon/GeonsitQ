@@ -2,3 +2,5 @@
 maps/
 cache/
 __pycache__/
+env/
+data/cache/*.pkl
