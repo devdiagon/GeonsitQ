@@ -357,3 +357,98 @@ class MapRenderer:
         m.add_child(minimap)
         
         return m
+    
+    def add_city_layers(
+        self,
+        m: folium.Map,
+        city_graph,
+        layers_config: Dict[str, bool]
+    ) -> folium.Map:
+        """
+        Agrega capas adicionales del CityGraph al mapa.
+        
+        Args:
+            m: Mapa de Folium
+            city_graph: Instancia de CityGraph
+            layers_config: Dict con configuración de capas visibles
+                          Ej: {'crimes': True, 'metro': False, ...}
+        
+        Returns:
+            Mapa con capas adicionales
+        """
+        from factories.parks_layer_factory import ParksLayerFactory
+        from factories.tourist_place_layer_factory import TouristPlaceLayerFactory
+        from factories.crimes_layer_factory import CrimesLayerFactory
+        from folium_integration.metro.metro_factory import MetroFactory
+        from folium_integration.bus.bus_factory import BusFactory
+        from folium_integration.city_integration import CityTransportIntegration
+        from settings import settings
+        
+        # Parques
+        if layers_config.get('parks', False):
+            try:
+                park_factory = ParksLayerFactory()
+                park_layers = park_factory.create_feature_group(city_graph)
+                park_layers.add_to(m)
+            except Exception as e:
+                print(f" Error agregando capa de parques: {e}")
+        
+        # Lugares turísticos
+        if layers_config.get('tourist_places', False):
+            try:
+                tourism_factory = TouristPlaceLayerFactory()
+                tourism_layers = tourism_factory.create_feature_group(city_graph)
+                tourism_layers.add_to(m)
+            except Exception as e:
+                print(f" Error agregando lugares turísticos: {e}")
+        
+        # Crímenes
+        if layers_config.get('crimes', False):
+            try:
+                crime_factory = CrimesLayerFactory(
+                    shapefile_path=settings.SHP_CRIMES,
+                    layer_type='colored_polygons',
+                    color_field='color'
+                )
+                crime_layers = crime_factory.create_layer()
+                for layer in crime_layers:
+                    layer.add_to(m)
+            except Exception as e:
+                print(f" Error agregando capa de crímenes: {e}")
+        
+        # Sistema de transporte
+        if layers_config.get('metro', False) or layers_config.get('bus_routes', False) or layers_config.get('bus_stops', False):
+            try:
+                transport_integration = CityTransportIntegration()
+                
+                # Metro
+                if layers_config.get('metro', False):
+                    metro_factory = MetroFactory(
+                        settings.SHP_METRO,
+                        settings.SHP_METRO_STATIONS,
+                        system_name="Metro de Quito"
+                    )
+                    transport_integration.add_transport_system(metro_factory)
+                
+                # Buses
+                if layers_config.get('bus_routes', False) or layers_config.get('bus_stops', False):
+                    # Determinar qué mostrar
+                    show_routes = layers_config.get('bus_routes', False)
+                    show_stops = layers_config.get('bus_stops', False)
+                    
+                    bus_factory = BusFactory(
+                        settings.SHP_BUS_ROUTES,
+                        settings.SHP_BUS_STOPS,
+                        system_name="Buses Urbanos",
+                        max_routes=50 if show_routes else 0,
+                        max_stops=1000 if show_stops else 0
+                    )
+                    transport_integration.add_transport_system(bus_factory)
+                
+                # Agregar al mapa
+                transport_integration.add_layers_to_map(m)
+                
+            except Exception as e:
+                print(f" Error agregando capas de transporte: {e}")
+        
+        return m

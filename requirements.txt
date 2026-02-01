@@ -6,6 +6,7 @@ pandas>=2.0.0
 numpy>=1.24.0
 osmnx>=1.9.0
 pydantic-settings>=2.0.0
+matplotlib>=3.8
 
 # === Dependencias para Análisis ===
 scikit-learn>=1.3.0

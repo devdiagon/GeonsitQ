@@ -118,17 +118,21 @@ def init_session_state():
     # Modo de comparación
     if 'comparison_mode' not in st.session_state:
         st.session_state.comparison_mode = 'individual'
+    
+    # Configuración de capas del mapa
+    if 'map_layers_config' not in st.session_state:
+        st.session_state.map_layers_config = {
+            'parks': False,
+            'tourist_places': False,
+            'crimes': False,
+            'metro': False,
+            'bus_routes': False,
+            'bus_stops': False
+        }
 
 # ========== CALLBACKS ==========
 
-def on_strategy_change():
-    st.session_state.action_history.append({
-        'timestamp': datetime.now(),
-        'action': 'strategy_change',
-        'from': st.session_state.current_strategy,
-        'to': st.session_state.temp_strategy
-    })
-    
+def on_strategy_change():    
     # Actualizar estrategia
     st.session_state.current_strategy = st.session_state.temp_strategy
     
@@ -249,6 +253,75 @@ def render_sidebar():
         index=0 if st.session_state.comparison_mode == 'individual' else 1,
         help="Individual: analiza con la estrategia seleccionada\nMulti-estrategia: compara resultados de todas las estrategias"
     )
+
+    st.sidebar.markdown("---")
+    
+    # ========== CAPAS ADICIONALES DEL MAPA ==========
+    
+    st.sidebar.markdown("### Capas del Mapa")
+    st.sidebar.caption("Selecciona qué capas mostrar en el mapa (solo visual)")
+    
+    # Inicializar configuración de capas si no existe
+    if 'map_layers_config' not in st.session_state:
+        st.session_state.map_layers_config = {
+            'parks': False,
+            'tourist_places': False,
+            'crimes': False,
+            'metro': False,
+            'bus_routes': False,
+            'bus_stops': False
+        }
+    
+    # Checkboxes para cada capa
+    new_layers_config = {}
+    
+    with st.sidebar.expander("Capas de Ciudad", expanded=False):
+        new_layers_config['parks'] = st.checkbox(
+            "Parques",
+            value=st.session_state.map_layers_config['parks'],
+            key='checkbox_layer_parks',
+            help="Muestra parques públicos en el mapa"
+        )
+        
+        new_layers_config['tourist_places'] = st.checkbox(
+            "Lugares Turísticos",
+            value=st.session_state.map_layers_config['tourist_places'],
+            key='checkbox_layer_tourist',
+            help="Muestra museos, galerías y atracciones"
+        )
+        
+        new_layers_config['crimes'] = st.checkbox(
+            "Zonas de Criminalidad",
+            value=st.session_state.map_layers_config['crimes'],
+            key='checkbox_layer_crimes',
+            help="Muestra zonas por nivel de criminalidad"
+        )
+    
+    with st.sidebar.expander("Capas de Transporte", expanded=False):
+        new_layers_config['metro'] = st.checkbox(
+            "Metro",
+            value=st.session_state.map_layers_config['metro'],
+            key='checkbox_layer_metro',
+            help="Muestra línea y estaciones del metro"
+        )
+        
+        new_layers_config['bus_routes'] = st.checkbox(
+            "Rutas de Buses",
+            value=st.session_state.map_layers_config['bus_routes'],
+            key='checkbox_layer_bus_routes',
+            help="Muestra hasta 50 rutas de buses principales"
+        )
+        
+        new_layers_config['bus_stops'] = st.checkbox(
+            "Paradas de Bus",
+            value=st.session_state.map_layers_config['bus_stops'],
+            key='checkbox_layer_bus_stops',
+            help="Muestra paradas de buses urbanos"
+        )
+    
+    # Detectar cambios en las capas
+    if new_layers_config != st.session_state.map_layers_config:
+        st.session_state.map_layers_config = new_layers_config
     
     st.sidebar.markdown("---")
     
@@ -273,22 +346,13 @@ def render_sidebar():
     with col1:
         if st.button("Refresh", width='stretch', help="Recalcula métricas (ignora caché)"):
             with st.spinner('Recalculando...'):
-                start_time = time.time()
                 st.session_state.system.refresh_analysis()
-                elapsed = time.time() - start_time
-                st.success(f"Completado en {elapsed:.1f}s")
                 st.rerun()
     
     with col2:
         if st.button("Limpiar", width='stretch', help="Invalida caché"):
             st.session_state.system.invalidate_cache()
-            st.info("Caché limpiado")
-            time.sleep(1)
             st.rerun()
-    
-    # Botón de exportar
-    if st.sidebar.button("Exportar Reporte", width='stretch', help="Exporta análisis actual"):
-        st.sidebar.info("WIP")
 
 
 # ========== HEADER ==========
@@ -300,9 +364,7 @@ def render_header():
 
 # ========== TAB 1: MAPA INTERACTIVO ==========
 
-def render_map_tab():
-    """Renderiza el tab del mapa interactivo."""
-    
+def render_map_tab():    
     st.markdown("### Mapa de Distritos por Score")
     
     if st.session_state.current_strategy is None:
@@ -331,14 +393,20 @@ def render_map_tab():
             layer_name=f"Scores - {strategy.get_name()}"
         )
         
+        # ========== AGREGAR CAPAS ADICIONALES ==========
+        m = st.session_state.map_renderer.add_city_layers(
+            m=m,
+            city_graph=st.session_state.system.city,
+            layers_config=st.session_state.map_layers_config
+        )
+        
         # Agregar controles
         m = st.session_state.map_renderer.add_fullscreen_control(m)
         m = st.session_state.map_renderer.add_minimap(m)
         
-        # Agregar LayerControl
         import folium
         folium.LayerControl(position='topright', collapsed=False).add_to(m)
-    
+
     # Mostrar mapa
     from streamlit_folium import st_folium
     
