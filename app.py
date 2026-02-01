@@ -1,6 +1,9 @@
 import streamlit as st
 import sys
 from pathlib import Path
+import time
+from datetime import datetime
+import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
@@ -74,13 +77,12 @@ def load_custom_css():
 # ========== INICIALIZACIÓN DE SESSION STATE ==========
 
 def init_session_state():
-    """Inicializa variables de session state."""
     
     # Sistema backend
     if 'system' not in st.session_state:
         with st.spinner('Inicializando sistema...'):
             st.session_state.system = RecommendationSystem(config_path='config.yaml')
-        st.success('Sistema inicializado correctamente')
+            st.session_state.init_time = datetime.now()
     
     # Renderizadores
     if 'map_renderer' not in st.session_state:
@@ -91,7 +93,8 @@ def init_session_state():
     
     # Estado de la UI
     if 'current_strategy' not in st.session_state:
-        st.session_state.current_strategy = None
+        st.session_state.current_strategy = 'quality_of_life'
+        st.session_state.system.set_strategy(st.session_state.current_strategy)
     
     if 'selected_district' not in st.session_state:
         st.session_state.selected_district = None
@@ -101,6 +104,42 @@ def init_session_state():
     
     if 'top_n' not in st.session_state:
         st.session_state.top_n = 10
+    
+    # Capas activas del mapa
+    if 'active_layers' not in st.session_state:
+        st.session_state.active_layers = {
+            'districts': True,
+            'labels': True
+        }
+    
+    # Modo de comparación
+    if 'comparison_mode' not in st.session_state:
+        st.session_state.comparison_mode = 'individual'
+
+# ========== CALLBACKS ==========
+
+def on_strategy_change():
+    st.session_state.action_history.append({
+        'timestamp': datetime.now(),
+        'action': 'strategy_change',
+        'from': st.session_state.current_strategy,
+        'to': st.session_state.temp_strategy
+    })
+    
+    # Actualizar estrategia
+    st.session_state.current_strategy = st.session_state.temp_strategy
+    
+    # Aplicar cambio en el backend
+    with st.spinner('Actualizando análisis...'):
+        st.session_state.system.set_strategy(st.session_state.current_strategy)
+
+
+def on_district_select():
+    st.session_state.selected_district = st.session_state.temp_selected_district
+
+
+def on_visualization_option_change():
+    st.session_state.force_map_update = True
 
 
 # ========== SIDEBAR ==========
@@ -125,12 +164,16 @@ def render_sidebar():
     
     # Crear lista de opciones para el radio
     options = [strategy_display_names.get(name, name) for name in strategy_names]
+
+    # Obtener índice actual
+    current_index = strategy_names.index(st.session_state.current_strategy)
     
     # Radio button para seleccionar estrategia
     selected_display = st.sidebar.radio(
         "Selecciona tu perfil:",
         options,
-        index=0 if st.session_state.current_strategy is None else strategy_names.index(st.session_state.current_strategy),
+        index=current_index,
+        key='temp_strategy_display',
         help="Cada estrategia prioriza diferentes aspectos de los distritos"
     )
     
@@ -139,10 +182,9 @@ def render_sidebar():
     
     # Actualizar estrategia si cambió
     if selected_strategy != st.session_state.current_strategy:
-        with st.spinner('Cambiando estrategia...'):
-            st.session_state.system.set_strategy(selected_strategy)
-            st.session_state.current_strategy = selected_strategy
-        st.rerun()
+      st.session_state.temp_strategy = selected_strategy
+      on_strategy_change()
+      st.rerun()
     
     # Mostrar descripción de la estrategia
     if st.session_state.current_strategy:
@@ -150,30 +192,59 @@ def render_sidebar():
         st.sidebar.info(f"**{strategy_obj.get_description()}**")
         
         # Mostrar pesos
-        with st.sidebar.expander("Ver pesos de métricas"):
+        with st.sidebar.expander("Ver pesos de métricas", expanded=False):
             weights = strategy_obj.get_weights()
-            for metric, weight in weights.items():
+            for metric, weight in sorted(weights.items(), key=lambda x: x[1], reverse=True):
                 if weight > 0:
-                    st.write(f"• **{metric.capitalize()}**: {weight*100:.0f}%")
+                    col1, col2 = st.columns([3, 1])
+                    with col1:
+                        st.progress(weight, text=f"**{metric.capitalize()}**")
+                    with col2:
+                        st.write(f"{weight*100:.0f}%")
     
     st.sidebar.markdown("---")
     
     # Opciones de visualización
     st.sidebar.markdown("### Opciones de Visualización")
     
-    st.session_state.show_labels = st.sidebar.checkbox(
+    new_show_labels = st.sidebar.checkbox(
         "Mostrar nombres en mapa",
         value=st.session_state.show_labels,
+        key='checkbox_labels',
         help="Muestra etiquetas con nombres de distritos en el mapa"
     )
+
+    if new_show_labels != st.session_state.show_labels:
+        st.session_state.show_labels = new_show_labels
+        on_visualization_option_change()
     
-    st.session_state.top_n = st.sidebar.slider(
+    new_top_n = st.sidebar.slider(
         "Top N distritos a mostrar",
         min_value=5,
         max_value=20,
         value=st.session_state.top_n,
         step=1,
+        key='slider_top_n',
         help="Número de distritos en rankings y gráficos"
+    )
+
+    if new_top_n != st.session_state.top_n:
+        st.session_state.top_n = new_top_n
+    
+    # Modo de comparación
+    st.sidebar.markdown("### Modo de Análisis")
+    
+    comparison_options = {
+        'individual': 'Individual',
+        'multi_strategy': 'Multi-estrategia'
+    }
+    
+    st.session_state.comparison_mode = st.sidebar.radio(
+        "Tipo de análisis:",
+        options=list(comparison_options.keys()),
+        format_func=lambda x: comparison_options[x],
+        index=0 if st.session_state.comparison_mode == 'individual' else 1,
+        help="Individual: analiza con la estrategia seleccionada\nMulti-estrategia: compara resultados de todas las estrategias"
     )
     
     st.sidebar.markdown("---")
@@ -189,32 +260,39 @@ def render_sidebar():
     with col2:
         st.metric("Estrategias", len(status['available_strategies']))
     
-    # Caché
-    cache_status = "Activo" if status['cache_valid'] else "⚠️ Inactivo"
-    st.sidebar.text(f"Caché: {cache_status}")
-    
     st.sidebar.markdown("---")
     
-    # Botón de refresh
-    if st.sidebar.button("Recalcular Métricas", help="Fuerza recálculo de todas las métricas (ignora caché)"):
-        with st.spinner('Recalculando...'):
-            st.session_state.system.refresh_analysis()
-        st.success("Métricas recalculadas")
-        st.rerun()
+    # Acciones
+    st.sidebar.markdown("### Acciones")
+    
+    col1, col2 = st.sidebar.columns(2)
+    
+    with col1:
+        if st.button("Refresh", width='stretch', help="Recalcula métricas (ignora caché)"):
+            with st.spinner('Recalculando...'):
+                start_time = time.time()
+                st.session_state.system.refresh_analysis()
+                elapsed = time.time() - start_time
+                st.success(f"Completado en {elapsed:.1f}s")
+                st.rerun()
+    
+    with col2:
+        if st.button("Limpiar", width='stretch', help="Invalida caché"):
+            st.session_state.system.invalidate_cache()
+            st.info("Caché limpiado")
+            time.sleep(1)
+            st.rerun()
+    
+    # Botón de exportar
+    if st.sidebar.button("Exportar Reporte", width='stretch', help="Exporta análisis actual"):
+        st.sidebar.info("WIP")
 
 
 # ========== HEADER ==========
 
 def render_header():
-    """Renderiza el header principal."""
-    
     st.markdown('<div class="main-header">Sistema de Recomendaciones Urbanas</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">Análisis de Distritos</div>', unsafe_allow_html=True)
-    
-    # Mostrar estrategia actual
-    if st.session_state.current_strategy:
-        strategy = st.session_state.system.get_current_strategy()
-        st.info(f"**Estrategia Activa**: {strategy.get_name()} - {strategy.get_description()}")
 
 
 # ========== TAB 1: MAPA INTERACTIVO ==========
@@ -313,7 +391,7 @@ def render_rankings_tab():
         top_n=st.session_state.top_n
     )
     
-    st.plotly_chart(fig_ranking, use_container_width=True)
+    st.plotly_chart(fig_ranking, width='stretch')
     
     # Dos columnas para gráficos adicionales
     col1, col2 = st.columns(2)
@@ -324,14 +402,14 @@ def render_rankings_tab():
             scores_df=scores_df,
             strategy=strategy
         )
-        st.plotly_chart(fig_dist, use_container_width=True)
+        st.plotly_chart(fig_dist, width='stretch')
     
     with col2:
         st.markdown("#### Correlación entre Métricas")
         fig_corr = st.session_state.chart_generator.create_correlation_heatmap(
             scores_df=scores_df
         )
-        st.plotly_chart(fig_corr, use_container_width=True)
+        st.plotly_chart(fig_corr, width='stretch')
     
     # Tabla comparativa
     st.markdown("---")
@@ -343,20 +421,23 @@ def render_rankings_tab():
         top_districts=top_districts
     )
     
-    st.plotly_chart(fig_table, use_container_width=True)
+    st.plotly_chart(fig_table, width='stretch')
 
 
 # ========== TAB 3: COMPARACIÓN DETALLADA ==========
 
-def render_comparison_tab():
-    """Renderiza el tab de comparación detallada."""
-    
+def render_comparison_tab():    
     st.markdown("### Comparación Detallada")
     
     if st.session_state.current_strategy is None:
         st.warning("Por favor, selecciona una estrategia en el sidebar")
         return
     
+    # Verificar modo de comparación
+    if st.session_state.comparison_mode == 'multi_strategy':
+        render_multi_strategy_comparison()
+        return
+
     scores_df = st.session_state.system.get_scores_df()
     strategy = st.session_state.system.get_current_strategy()
     
@@ -370,13 +451,31 @@ def render_comparison_tab():
     all_districts = scores_df['district_name'].tolist()
     
     # Por defecto, seleccionar top 3
-    default_selection = all_districts[:3]
+    col1, col2, col3 = st.columns(3)
+
+    quick_select = None
+
+    with col1:
+        if st.button("Top 3", width='stretch'):
+            quick_select = all_districts[:3]
     
+    with col2:
+        if st.button("Top 5", width='stretch'):
+            quick_select = all_districts[:5]
+    
+    with col3:
+        if st.button("Aleatorio", width='stretch'):
+            import random
+            quick_select = random.sample(all_districts, min(3, len(all_districts)))
+
+    default_selection = quick_select if quick_select else all_districts[:3]
+
     selected_districts = st.multiselect(
         "Distritos:",
         options=all_districts,
         default=default_selection,
         max_selections=5,
+        key='multiselect_districts',
         help="Selecciona hasta 5 distritos para comparar"
     )
     
@@ -384,6 +483,8 @@ def render_comparison_tab():
         st.info("Selecciona al menos un distrito para ver la comparación")
         return
     
+    st.markdown(f"**Comparando {len(selected_districts)} distrito(s)**")
+
     # Gráfico de comparación de métricas
     st.markdown("#### Comparación de Métricas")
     
@@ -393,42 +494,114 @@ def render_comparison_tab():
         strategy=strategy
     )
     
-    st.plotly_chart(fig_comparison, use_container_width=True)
+    st.plotly_chart(fig_comparison, width='stretch')
     
     # Radar charts individuales
     st.markdown("---")
     st.markdown("#### Análisis Individual")
     
-    # Crear columnas según número de distritos seleccionados
-    num_cols = min(len(selected_districts), 3)
-    cols = st.columns(num_cols)
+    # Crear tabs para cada distrito
+    district_tabs = st.tabs([f"{name[:20]}" for name in selected_districts])
     
-    for i, district_name in enumerate(selected_districts[:3]):
-        with cols[i % num_cols]:
+    for i, district_name in enumerate(selected_districts):
+        with district_tabs[i]:
             district_data = scores_df[scores_df['district_name'] == district_name].iloc[0]
             
+            # Información del distrito
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric("Score", f"{district_data['score']:.3f}")
+            with col2:
+                st.metric("Ranking", f"#{int(district_data['rank'])}")
+            with col3:
+                st.metric("Seguridad", f"{district_data['safety']:.2f}")
+            with col4:
+                st.metric("Transporte", f"{district_data['transport']:.2f}")
+            
+            # Radar chart
             fig_radar = st.session_state.chart_generator.create_metrics_radar_chart(
                 district_data=district_data,
                 strategy=strategy
             )
             
-            st.plotly_chart(fig_radar, use_container_width=True)
-    
-    # Mostrar más si hay más de 3
-    if len(selected_districts) > 3:
-        with st.expander(f"Ver {len(selected_districts) - 3} distritos adicionales"):
-            cols2 = st.columns(min(len(selected_districts) - 3, 3))
+            st.plotly_chart(fig_radar, width='stretch')
             
-            for i, district_name in enumerate(selected_districts[3:]):
-                with cols2[i % 3]:
-                    district_data = scores_df[scores_df['district_name'] == district_name].iloc[0]
-                    
-                    fig_radar = st.session_state.chart_generator.create_metrics_radar_chart(
-                        district_data=district_data,
-                        strategy=strategy
-                    )
-                    
-                    st.plotly_chart(fig_radar, use_container_width=True)
+            # Detalles adicionales
+            with st.expander("Ver detalles completos"):
+                details = st.session_state.system.get_district_details(district_name)
+                if details:
+                    st.json(details)
+
+def render_multi_strategy_comparison():    
+    st.markdown("#### Análisis Multi-Estrategia")
+    st.info("Comparando resultados de todas las estrategias disponibles")
+    
+    # Obtener scores de todas las estrategias
+    all_scores = get_all_strategy_scores()
+    
+    # Selector de distrito para analizar
+    first_strategy_scores = list(all_scores.values())[0]
+    all_districts = first_strategy_scores['district_name'].tolist()
+    
+    selected_district = st.selectbox(
+        "Selecciona un distrito para analizar:",
+        options=all_districts,
+        index=0,
+        key='select_multi_strategy_district'
+    )
+    
+    # Gráfico de comparación multi-estrategia
+    fig_multi = st.session_state.chart_generator.create_multi_strategy_comparison(
+        all_scores=all_scores,
+        district_name=selected_district
+    )
+    
+    st.plotly_chart(fig_multi, width='stretch')
+    
+    # Tabla comparativa
+    st.markdown("#### Scores Detallados por Estrategia")
+    
+    comparison_data = []
+    for strategy_name, scores_df in all_scores.items():
+        district_data = scores_df[scores_df['district_name'] == selected_district]
+        if len(district_data) > 0:
+            row = district_data.iloc[0]
+            comparison_data.append({
+                'Estrategia': strategy_name,
+                'Score': f"{row['score']:.3f}",
+                'Ranking': f"#{int(row['rank'])}",
+                'Seguridad': f"{row['safety']:.2f}",
+                'Transporte': f"{row['transport']:.2f}",
+                'Verde': f"{row['green']:.2f}",
+                'Servicios': f"{row['services']:.2f}"
+            })
+    
+    df_comparison = pd.DataFrame(comparison_data)
+    st.dataframe(df_comparison, width='stretch', hide_index=True)
+
+# ========== ANÁLISIS MULTI-ESTRATEGIA ==========
+
+def get_all_strategy_scores():
+    """Obtiene scores de todas las estrategias."""
+    
+    if 'all_strategy_scores' not in st.session_state:
+        st.session_state.all_strategy_scores = {}
+    
+    strategies = st.session_state.system.get_available_strategies()
+    current_strategy = st.session_state.current_strategy
+    
+    # Calcular scores para cada estrategia
+    for strategy_name in strategies.keys():
+        if strategy_name not in st.session_state.all_strategy_scores:
+            with st.spinner(f'Calculando scores para {strategy_name}...'):
+                st.session_state.system.set_strategy(strategy_name)
+                st.session_state.all_strategy_scores[strategy_name] = st.session_state.system.get_scores_df()
+    
+    # Restaurar estrategia actual
+    st.session_state.system.set_strategy(current_strategy)
+    
+    return st.session_state.all_strategy_scores
 
 
 # ========== MAIN APP ==========
