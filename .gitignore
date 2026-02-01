@@ -1,5 +1,6 @@
 .env
 maps/
+charts/
 cache/
 __pycache__/
 env/
