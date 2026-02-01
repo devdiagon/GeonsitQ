@@ -202,3 +202,18 @@ class CityGraph:
             import traceback
             traceback.print_exc()
             return None
+    
+    # ================ Métodos para el sistema de recomendaciones ================
+    def get_city_name(self) -> str:
+        return settings.CITY
+    
+    def get_districts_names(self) -> list:
+        if self._graph is not None and 'display_name' in self._graph.columns:
+            return self._graph['display_name'].tolist()
+        return []
+    
+    def get_bounds(self) -> tuple:
+        if self._graph is not None:
+            bounds = self._graph.total_bounds
+            return tuple(bounds)
+        return None
