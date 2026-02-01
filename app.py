@@ -99,6 +99,9 @@ def init_session_state():
     if 'selected_district' not in st.session_state:
         st.session_state.selected_district = None
     
+    if 'selected_districts_comparison' not in st.session_state:
+        st.session_state.selected_districts_comparison = None
+    
     if 'show_labels' not in st.session_state:
         st.session_state.show_labels = True
     
@@ -453,31 +456,37 @@ def render_comparison_tab():
     # Por defecto, seleccionar top 3
     col1, col2, col3 = st.columns(3)
 
-    quick_select = None
-
     with col1:
         if st.button("Top 3", width='stretch'):
-            quick_select = all_districts[:3]
+            st.session_state.selected_districts_comparison = all_districts[:3]
+            st.session_state.multiselect_districts = all_districts[:3]
+            st.rerun()
     
     with col2:
         if st.button("Top 5", width='stretch'):
-            quick_select = all_districts[:5]
+            st.session_state.selected_districts_comparison = all_districts[:5]
+            st.session_state.multiselect_districts = all_districts[:5]
+            st.rerun()
     
     with col3:
         if st.button("Aleatorio", width='stretch'):
             import random
-            quick_select = random.sample(all_districts, min(3, len(all_districts)))
-
-    default_selection = quick_select if quick_select else all_districts[:3]
+            rng_num = min(3, len(all_districts))
+            random_selection = random.sample(all_districts, rng_num)
+            st.session_state.selected_districts_comparison = random_selection
+            st.session_state.multiselect_districts = random_selection
+            st.rerun()
 
     selected_districts = st.multiselect(
         "Distritos:",
         options=all_districts,
-        default=default_selection,
         max_selections=5,
         key='multiselect_districts',
-        help="Selecciona hasta 5 distritos para comparar"
+        help="Selecciona hasta 5 distritos para comparar",
     )
+
+    if selected_districts != st.session_state.selected_districts_comparison:
+      st.session_state.selected_districts_comparison = selected_districts
     
     if len(selected_districts) == 0:
         st.info("Selecciona al menos un distrito para ver la comparación")
