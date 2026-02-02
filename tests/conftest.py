@@ -139,3 +139,20 @@ def mock_map_state():
 def mock_cache_manager(tmp_path):
     from utils.cache_manager import CacheManager
     return CacheManager(cache_dir=str(tmp_path), ttl_hours=1)
+
+@pytest.fixture
+def mock_city_graph(mock_districts_gdf, mock_parks_gdf, mock_tourist_places_gdf):
+    from unittest.mock import Mock
+    
+    mock_city = Mock()
+    
+    mock_city.get_graph.return_value = mock_districts_gdf
+    mock_city.get_parks.return_value = mock_parks_gdf
+    mock_city.get_tourist_places.return_value = mock_tourist_places_gdf
+    mock_city.get_places.return_value = mock_districts_gdf['display_name'].tolist()
+    
+    mock_city.get_city_name.return_value = "City"
+    mock_city.get_districts_names.return_value = mock_districts_gdf['display_name'].tolist()
+    mock_city.get_bounds.return_value = tuple(mock_districts_gdf.total_bounds)
+    
+    return mock_city
