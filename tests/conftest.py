@@ -58,10 +58,8 @@ def mock_parks_gdf():
         ]
     }
     gdf = gpd.GeoDataFrame(parks, crs='EPSG:4326')
-    # Convertir a UTM para calcular área
-    gdf_utm = gdf.to_crs('EPSG:32717')
-    gdf_utm['area'] = gdf_utm.geometry.area
-    return gdf_utm.to_crs('EPSG:4326')
+    gdf['area'] = gdf.geometry.area
+    return gdf
 
 
 @pytest.fixture
