@@ -1,0 +1,42 @@
+cache:
+  enabled: true
+  directory: tests/cache
+  metrics_file: test_metrics.pkl
+  ttl_hours: 1
+
+normalization:
+  method: min_max
+  handle_nulls: neutral
+  safety_inversion: true
+
+strategies:
+  quality_of_life:
+    weights:
+      safety: 0.40
+      transport: 0.35
+      green: 0.25
+      services: 0.0
+    color_scheme: YlGn
+  
+  tourist:
+    weights:
+      services: 0.40
+      safety: 0.35
+      transport: 0.25
+      green: 0.0
+    color_scheme: YlOrRd
+  
+  convenience:
+    weights:
+      services: 0.45
+      transport: 0.35
+      green: 0.20
+      safety: 0.0
+    color_scheme: PuBu
+
+analysis:
+  transport:
+    max_distance_to_metro: 500
+  green:
+    min_park_area: 1000
+    ideal_green_coverage: 0.15
