@@ -17,7 +17,7 @@ The application provides an interactive Streamlit-based interface where users ca
 
 ## Design Patterns Implemented
 
-For a visual representation of the design patterns implemented in this system, refer to the [Design Patterns Diagrams](pics/DesignPatternsDiagrams.drawio).
+For a visual representation of the design patterns implemented in this system, refer to the [Design Patterns Diagrams](pics/DesignPatternsDiagrams.png).
 
 ### 1. **Singleton Pattern**
 Located in [src/mapq.py](src/mapq.py), the `CityGraph` class implements the Singleton pattern to ensure only one instance of the city graph exists throughout the application lifecycle. This guarantees a single, shared source of truth for loading and managing district data, parks, tourist places, and the city's geographic information, preventing redundant data loads and ensuring consistency across the system.
