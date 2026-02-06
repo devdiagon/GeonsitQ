@@ -15,6 +15,21 @@ The system integrates multiple data sources including transportation networks (m
 
 The application provides an interactive Streamlit-based interface where users can visualize geospatial layers, compare different urban areas, view statistical rankings, and analyze city metrics through an intuitive dashboard.
 
+## Demo
+
+<table>
+	<tr>
+		<td style="padding: 10px;"><img src="pics/screenshot/cap1.png" alt="GeonsitQ demo screenshot 1" width="320"></td>
+		<td style="padding: 10px;"><img src="pics/screenshot/cap2.png" alt="GeonsitQ demo screenshot 2" width="320"></td>
+		<td style="padding: 10px;"><img src="pics/screenshot/cap3.png" alt="GeonsitQ demo screenshot 3" width="320"></td>
+	</tr>
+	<tr>
+		<td style="padding: 10px;"><img src="pics/screenshot/cap4.png" alt="GeonsitQ demo screenshot 4" width="320"></td>
+		<td style="padding: 10px;"><img src="pics/screenshot/cap5.png" alt="GeonsitQ demo screenshot 5" width="320"></td>
+		<td style="padding: 10px;"><img src="pics/screenshot/cap6.png" alt="GeonsitQ demo screenshot 6" width="320"></td>
+	</tr>
+</table>
+
 ## Design Patterns Implemented
 
 For a visual representation of the design patterns implemented in this system, refer to the [Design Patterns Diagrams](pics/DesignPatternsDiagrams.png).
