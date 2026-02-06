@@ -47,6 +47,7 @@ class ChartGenerator:
         color = self.color_schemes.get(strategy_name, self.color_schemes['default'])
         
         # Crear figura
+        label_color = '#444'
         fig = go.Figure()
         
         fig.add_trace(go.Bar(
@@ -256,7 +257,7 @@ class ChartGenerator:
             line_color="red",
             annotation_text=f"Promedio: {mean_score:.3f}",
             annotation_position="top",
-            annotation_font_color="red"
+            annotation_font_color='#333'
         )
         
         # Título
@@ -269,13 +270,21 @@ class ChartGenerator:
                 font=dict(size=16, color='#333')
             ),
             xaxis=dict(
-                title="Score",
+                title=dict(
+                    text="Score",
+                    font=dict(color='#333')
+                ),
                 range=[0, 1],
-                gridcolor='#e0e0e0'
+                gridcolor='#e0e0e0',
+                tickfont=dict(color='#333')
             ),
             yaxis=dict(
-                title="Número de Distritos",
-                gridcolor='#e0e0e0'
+                title=dict(
+                    text="Número de Distritos",
+                    font=dict(color='#333')
+                ),
+                gridcolor='#e0e0e0',
+                tickfont=dict(color='#333')
             ),
             height=400,
             plot_bgcolor='white',

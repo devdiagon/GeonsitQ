@@ -138,7 +138,7 @@ def _render_visualization_options():
 
 def _render_map_layers():
   st.sidebar.markdown("### Capas del Mapa")
-  st.sidebar.caption("Selecciona qué capas mostrar en el mapa (solo visual)")
+  st.sidebar.caption("Selecciona qué capas mostrar en el mapa")
     
   # Inicializar configuración de capas si no existe
   if 'map_layers_config' not in st.session_state:
@@ -221,12 +221,12 @@ def _render_system_status():
 
 
 def _render_actions():
-  st.sidebar.markdown("### Acciones")
+  st.sidebar.markdown("### Acciones de caché")
     
   col1, col2 = st.sidebar.columns(2)
   
   with col1:
-    if st.button("Refresh", width='stretch', help="Recalcula métricas (ignora caché)"):
+    if st.button("Refrescar", width='stretch', help="Recalcula métricas (ignora caché)"):
       with st.spinner('Recalculando...'):
         st.session_state.system.refresh_analysis()
         st.rerun()
