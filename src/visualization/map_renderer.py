@@ -176,7 +176,7 @@ class MapRenderer:
         """
         # Mapeo de esquemas a paletas
         color_palettes = {
-            'YlGn': ['#ffffcc', '#c7e9b4', '#7fcdbb', '#41b6c4', '#1d91c0', '#225ea8', '#0c2c84'],
+            'YlGn': ['#ffffe5', '#fff7bc', '#d9f0a3', '#addd8e', '#78c679', '#41ab5d', '#238443'],
             'YlOrRd': ['#ffffb2', '#fecc5c', '#fd8d3c', '#f03b20', '#bd0026'],
             'PuBu': ['#f1eef6', '#d0d1e6', '#a6bddb', '#74a9cf', '#3690c0', '#0570b0', '#034e7b'],
             'RdYlGn': ['#d73027', '#fc8d59', '#fee08b', '#d9ef8b', '#91cf60', '#1a9850'],

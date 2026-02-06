@@ -62,7 +62,11 @@ class ChartGenerator:
                 ],
                 showscale=True,
                 colorbar=dict(
-                    title="Score",
+                    title=dict(
+                        text="Score",
+                        font=dict(color="#555", size=12)
+                    ),
+                    tickfont=dict(color="#555", size=10),
                     thickness=15,
                     len=0.7
                 )
@@ -82,13 +86,17 @@ class ChartGenerator:
                 font=dict(size=18, color='#333')
             ),
             xaxis=dict(
-                title="Score",
+                title=dict(
+                    text="Score",
+                    font=dict(color="#555", size=12)
+                ),
                 range=[0, 1],
-                gridcolor='#e0e0e0'
+                gridcolor='#e0e0e0',
+                tickfont=dict(color='#555')
             ),
             yaxis=dict(
                 title="",
-                tickfont=dict(size=11)
+                tickfont=dict(size=11, color='#555')
             ),
             height=400 + (top_n * 20),
             margin=dict(l=150, r=50, t=80, b=50),
@@ -177,10 +185,12 @@ class ChartGenerator:
                 radialaxis=dict(
                     visible=True,
                     range=[0, 1],
-                    gridcolor='#e0e0e0'
+                    gridcolor='#e0e0e0',
+                    tickfont=dict(color='#555')
                 ),
                 angularaxis=dict(
-                    gridcolor='#e0e0e0'
+                    gridcolor='#e0e0e0',
+                    tickfont=dict(color='#555')
                 )
             ),
             title=dict(
@@ -245,7 +255,8 @@ class ChartGenerator:
             line_dash="dash",
             line_color="red",
             annotation_text=f"Promedio: {mean_score:.3f}",
-            annotation_position="top"
+            annotation_position="top",
+            annotation_font_color="red"
         )
         
         # Título
@@ -408,13 +419,21 @@ class ChartGenerator:
                 font=dict(size=16, color='#333')
             ),
             xaxis=dict(
-                title="Distrito",
-                tickangle=-45
+                title=dict(
+                    text="Distrito",
+                    font=dict(color='#555')
+                ),
+                tickangle=-45,
+                tickfont=dict(color='#555')
             ),
             yaxis=dict(
-                title="Valor",
+                title=dict(
+                    text="Valor",
+                    font=dict(color='#555')
+                ),
                 range=[0, 1],
-                gridcolor='#e0e0e0'
+                gridcolor='#e0e0e0',
+                tickfont=dict(color='#555')
             ),
             barmode='group',
             height=450,
@@ -425,7 +444,8 @@ class ChartGenerator:
                 yanchor="bottom",
                 y=-0.4,
                 xanchor="center",
-                x=0.5
+                x=0.5,
+                font=dict(color='#555')
             ),
             margin=dict(b=120)
         )
@@ -476,7 +496,11 @@ class ChartGenerator:
             texttemplate='%{text:.2f}',
             textfont={"size": 10},
             colorbar=dict(
-                title="Correlación",
+                title=dict(
+                    text="Correlación",
+                    font=dict(color="#555", size=12)
+                ),
+                tickfont=dict(color="#555", size=10),
                 thickness=15,
                 len=0.7
             )
@@ -493,8 +517,14 @@ class ChartGenerator:
             ),
             height=450,
             width=500,
-            xaxis=dict(side='bottom'),
-            yaxis=dict(autorange='reversed'),
+            xaxis=dict(
+                side='bottom',
+                tickfont=dict(color='#555')
+            ),
+            yaxis=dict(
+                autorange='reversed',
+                tickfont=dict(color='#555')
+            ),
             paper_bgcolor='white'
         )
         
@@ -548,13 +578,21 @@ class ChartGenerator:
                 font=dict(size=16, color='#333')
             ),
             xaxis=dict(
-                title="Estrategia",
-                tickangle=-30
+                title=dict(
+                    text="Estrategia",
+                    font=dict(color='#555')
+                ),
+                tickangle=-30,
+                tickfont=dict(color='#555')
             ),
             yaxis=dict(
-                title="Score",
+                title=dict(
+                    text="Score",
+                    font=dict(color='#555')
+                ),
                 range=[0, 1],
-                gridcolor='#e0e0e0'
+                gridcolor='#e0e0e0',
+                tickfont=dict(color='#555')
             ),
             height=400,
             plot_bgcolor='white',
