@@ -21,10 +21,12 @@ The application provides an interactive Streamlit-based interface where users ca
 	<tr>
 		<td style="padding: 10px;"><img src="pics/screenshot/cap1.png" alt="GeonsitQ demo screenshot 1" width="320"></td>
 		<td style="padding: 10px;"><img src="pics/screenshot/cap2.png" alt="GeonsitQ demo screenshot 2" width="320"></td>
-		<td style="padding: 10px;"><img src="pics/screenshot/cap3.png" alt="GeonsitQ demo screenshot 3" width="320"></td>
 	</tr>
 	<tr>
+		<td style="padding: 10px;"><img src="pics/screenshot/cap3.png" alt="GeonsitQ demo screenshot 3" width="320"></td>
 		<td style="padding: 10px;"><img src="pics/screenshot/cap4.png" alt="GeonsitQ demo screenshot 4" width="320"></td>
+	</tr>
+	<tr>
 		<td style="padding: 10px;"><img src="pics/screenshot/cap5.png" alt="GeonsitQ demo screenshot 5" width="320"></td>
 		<td style="padding: 10px;"><img src="pics/screenshot/cap6.png" alt="GeonsitQ demo screenshot 6" width="320"></td>
 	</tr>
