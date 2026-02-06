@@ -15,6 +15,8 @@ The system integrates multiple data sources including transportation networks (m
 
 The application provides an interactive Streamlit-based interface where users can visualize geospatial layers, compare different urban areas, view statistical rankings, and analyze city metrics through an intuitive dashboard.
 
+> *Disclaimer: The shapefiles used in this project come from the public geoportal of the Municipality of Quito. The distribution of districts, parks, and tourist sites comes from OSM.*
+
 ## Demo
 
 <table>
